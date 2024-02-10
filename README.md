@@ -1,1 +1,2 @@
-# dsc-check
+# dsc-util
+Simple script to help discovery tool
