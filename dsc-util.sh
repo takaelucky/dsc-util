@@ -10,57 +10,46 @@ LATEST_VER=""
 ### Function declaration ### 
 
 check_login(){
- echo "Please login registry.redhat.io before running this script"
- echo "If you already logged in type 'c' to continue or 'x' to exit"
- read CONTINUE
-
- case $CONTINUE in 
-   c|C) 
-       if (! podman search $REG_PATH/$LATEST_IMAGE --list-tags > /dev/null 2>&1 )
-       then
-         echo "You will need to login registry.redhat.io before running this script"
-         exit 1
-       fi
-       ;;
-   x|X) 
-       exit ;;
-   *)
-       echo "Invalid input. exiting..." 
-       exit ;;
- esac
+  # exit out the script if not login to registry.redhat.io
+  timeout --foreground -k 1 5 podman login registry.redhat.io > /dev/null 2>&1 
+  if [ $? != 0 ] 
+  then
+    echo "Please login registry.redhat.io before running this script."
+    echo "command is 'podman login registry.redhat.io' to login"
+    exit 1
+  fi
 }
 
 get_current_ver(){
-
-  if [ `podman ps -a | grep discovery | grep -v toolbox | wc -l` -eq 0 ]
+  # exit out if dsc server and db does not exist
+  if [ `podman ps -a | grep discovery | grep -v toolbox | wc -l` -eq 0 ] && [ `podman ps -a | grep dsc-db | wc -l` -eq 0 ]
   then
-     echo "Discovery container does not exist. Please start the container or install it before using the script"
+     echo "Discovery server and DB does not exist or was never installed."
+     echo "Please use https://access.redhat.com/documentation/en-us/subscription_central/1-latest/html-single/installing_and_configuring_discovery/index to install the latest version"
      exit 1;
   fi
   CURRENT_VER=$(podman inspect discovery -f '{{.Config.Labels.version}}')
 }
 
 get_latest_ver(){
-
-  LATEST_VER=`podman search $REG_PATH/$LATEST_IMAGE --list-tags | cut -d" " -f3 | sort -rn | head -n1 | cut -d"-" -f1`
-  if [ $? != 0 ]
+   
+  if ( ! podman search $REG_PATH/$LATEST_IMAGE --list-tags > /dev/null 2>&1 )
   then
-    echo "You need to login to registry.redhat.io before running this script"
+    echo "Command 'podman search $REG_PATH/$LATEST_IMAGE --list-tags' is erroring"
+    echo "Possibly there is an outage on Red Hat side. Please check https://status.redhat.com/ or try the script later"
     exit 1; 
   fi
-  #echo $LATEST_VER
-  #echo $CURRENT_VER
+  LATEST_VER=`podman search $REG_PATH/$LATEST_IMAGE --list-tags | cut -d" " -f3 | sort -rn | head -n1 | cut -d"-" -f1`
 }
 
 check_current(){
-  if [ `podman images | grep $LATEST_IMAGE | wc -l` -eq 0 ] 
+  if [ `podman images | grep $LATEST_IMAGE | wc -l` -eq 0 ] || [ $LATEST_VER != $CURRENT_VER ]
   then 
-    echo "Please update your disvocery tool to the latest by using https://access.redhat.com/solutions/7025846"
-  elif [ $LATEST_VER = $CURRENT_VER ]
-  then
-    echo "You are up-to-date"
+    echo "Your current version is $CURRENT_VER and the latest is $LATEST_VER"
+    echo "Please update your disvocery tool to the latest by using https://access.redhat.com/articles/7036146"
   else
-    echo "Please update your disvocery tool to the latest by using https://access.redhat.com/solutions/7025846"
+    echo "Your current version is $CURRENT_VER and the latest is $LATEST_VER"
+    echo "The Discovery tool is up-to-date."
   fi
 
 }
