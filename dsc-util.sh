@@ -9,6 +9,30 @@ LATEST_VER=""
 
 ### Function declaration ### 
 
+main_menu()
+{
+  case $1 in
+    check_version)
+      #echo "checking"
+      check_login
+      get_current_ver
+      get_latest_ver
+      check_current
+      ;;
+    *)
+      echo "Please, pass the desired parameter"
+      echo ""
+      echo "$0 check_version"
+      ;;
+  esac
+
+#  if [ "$1" == "" ]; then
+#    echo "Please, pass the desired parameter"
+#    echo ""
+#    echo "$0 check_version"
+#  fi
+}
+
 check_login(){
   # exit out the script if not login to registry.redhat.io
   timeout --foreground -k 1 5 podman login registry.redhat.io > /dev/null 2>&1 
@@ -58,9 +82,8 @@ check_current(){
 
 ###  Main ###
 
-check_login
-get_current_ver
-get_latest_ver
-check_current
-
-
+main_menu $1
+#check_login
+#get_current_ver
+#get_latest_ver
+#check_current
