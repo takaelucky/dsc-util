@@ -24,8 +24,8 @@ get_current_ver(){
   # exit out if dsc server and db does not exist
   if [ `podman ps -a | grep discovery | grep -v toolbox | wc -l` -eq 0 ] && [ `podman ps -a | grep dsc-db | wc -l` -eq 0 ]
   then
-     echo "Discovery server and DB does not exist or never installed."
-     echo "Please use https://access.redhat.com/solutions/7038132 to re-install the latest version"
+     echo "Discovery server and DB does not exist or was never installed."
+     echo "Please use https://access.redhat.com/documentation/en-us/subscription_central/1-latest/html-single/installing_and_configuring_discovery/index to install the latest version"
      exit 1;
   fi
   CURRENT_VER=$(podman inspect discovery -f '{{.Config.Labels.version}}')
