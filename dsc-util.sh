@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# 
+# License ....: GPLv3
+# Purpose ....: Help with some pending features on discovery tool
+# Upstream ...: https://github.com/Qikfix/dsc-util
+# Developer ..: Takae Harrington <takae@takaeharrington.com>
+#               Waldirio Pinheiro <waldirio@gmail.com>
+# 
+
 ### Global Variable ###
 LATEST_IMAGE=discovery-server-rhel9
 REG_PATH=registry.redhat.io/discovery
@@ -25,12 +33,6 @@ main_menu()
       echo "$0 check_version"
       ;;
   esac
-
-#  if [ "$1" == "" ]; then
-#    echo "Please, pass the desired parameter"
-#    echo ""
-#    echo "$0 check_version"
-#  fi
 }
 
 check_login(){
@@ -70,7 +72,7 @@ check_current(){
   if [ `podman images | grep $LATEST_IMAGE | wc -l` -eq 0 ] || [ $LATEST_VER != $CURRENT_VER ]
   then 
     echo "Your current version is $CURRENT_VER and the latest is $LATEST_VER"
-    echo "Please update your disvocery tool to the latest by using https://access.redhat.com/articles/7036146"
+    echo "Please update your discovery tool to the latest by using https://access.redhat.com/articles/7036146"
   else
     echo "Your current version is $CURRENT_VER and the latest is $LATEST_VER"
     echo "The Discovery tool is up-to-date."
