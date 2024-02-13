@@ -27,10 +27,22 @@ main_menu()
       get_latest_ver
       check_current
       ;;
+    stop-pod)
+      echo "Stopping the discovery-pod pod"
+      podman pod stop discovery-pod
+      podman ps -p
+      ;;
+    start-pod)
+      echo "Starting the discovery-pod pod"
+      podman pod start discovery-pod
+      podman ps -p
+      ;;
     *)
       echo "Please, pass the desired parameter"
       echo ""
-      echo "$0 check_version"
+      echo "$0 check_version    # Check the current version and also for update"
+      echo "$0 stop-pod         # Stop the 'discovery-pod' pod"
+      echo "$0 start-pod        # Start the 'discovery-pod' pod"
       ;;
   esac
 }
