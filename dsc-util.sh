@@ -37,12 +37,16 @@ main_menu()
       podman pod start discovery-pod
       podman ps -p
       ;;
+    get-logs)
+      get_logs_func
+      ;;
     *)
       echo "Please, pass the desired parameter"
       echo ""
       echo "$0 check_version    # Check the current version and also for update"
       echo "$0 stop-pod         # Stop the 'discovery-pod' pod"
       echo "$0 start-pod        # Start the 'discovery-pod' pod"
+      echo "$0 get-logs         # Get the logs from discovery and DB"
       ;;
   esac
 }
@@ -65,6 +69,10 @@ get_current_ver(){
      echo "Discovery server and DB does not exist or was never installed."
      echo "Please use https://access.redhat.com/documentation/en-us/subscription_central/1-latest/html-single/installing_and_configuring_discovery/index to install the latest version"
      exit 1;
+  elif [ `podman ps -a | grep discovery | grep -v toolbox | wc -l` -eq 0 ]; then
+     echo "Discovery server does not exist."
+     echo "Please update your discovery tool to the latest by using https://access.redhat.com/articles/7036146"
+     exit 1; 
   fi
   CURRENT_VER=$(podman inspect discovery -f '{{.Config.Labels.version}}')
 }
@@ -91,6 +99,38 @@ check_current(){
   fi
 
 }
+
+get_logs_func(){
+  # get the logs from host mount for the disvocery and dsc-db
+ 
+  # remove previous file if exist
+  if [ -e /tmp/dsctool_* ]
+  then
+    rm -f /tmp/dsctool_*
+  fi
+ 
+  # getting host mount from the discovery & dsc-db container
+  declare -a HOST_MOUNT
+  i=0
+  while [ $i -le 1 ]
+  do
+  HOST_MOUNT[$i]=`podman inspect discovery --format="{{ (index .Mounts $i).Source}}"`
+  i=$(( $i + 1 ))
+  done 
+ 
+  HOST_MOUNT[$i]=`podman inspect dsc-db --format="{{ (index .Mounts 0).Source}}"` 
+  # echo ${HOST_MOUNT[@]}
+  tar -czvf /tmp/dsctool_`date +"%m%d%Y"`.tar.gz ${HOST_MOUNT[@]} &> /dev/null
+  if [ $? -ne 0 ] || [ ! -e /tmp/dsctool_* ]
+  then
+    echo "There is a problem and the log file did not get created" 
+    echo "Please run the command manually to observe the error"
+    echo "Command: 'tar -czvf /tmp/dsctool_`date +"%m%d%Y"`.tar.gz ${HOST_MOUNT[@]}'"
+  else
+    echo "Please attach the log file:  /tmp/dsctool_`date +"%m%d%Y"`.tar.gz"
+  fi
+}
+
 
 ### End of Function declaration ### 
 
