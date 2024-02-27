@@ -20,6 +20,7 @@ DISCOVERY_OFFLINE_FILE="/root/discovery_tags.txt"
 
 main_menu()
 {
+  pre_check
   case $1 in
     check_version)
       check_login
@@ -57,6 +58,17 @@ main_menu()
   esac
 }
 
+pre_check(){
+  # exit out if discovery server and/or db does not exist
+  if [ `podman ps -a | grep discovery | grep -v toolbox | wc -l` -eq 0 ] || [ `podman ps -a | grep dsc-db | wc -l` -eq 0 ]
+  then
+     echo "Discovery and/or DB containers does not exist or were never installed."
+     echo "Please use https://access.redhat.com/documentation/en-us/subscription_central/1-latest/html-single/installing_and_configuring_discovery/index to install the latest version"
+     echo "Or use https://access.redhat.com/articles/7036146 to update to the latest"
+     exit 1;
+  fi
+}
+
 check_login(){
   # exit out the script if not login to registry.redhat.io
   timeout --foreground -k 1 5 podman login registry.redhat.io > /dev/null 2>&1 
@@ -69,18 +81,8 @@ check_login(){
 }
 
 get_current_ver(){
-  # exit out if dsc server and db does not exist
-  if [ `podman ps -a | grep discovery | grep -v toolbox | wc -l` -eq 0 ] && [ `podman ps -a | grep dsc-db | wc -l` -eq 0 ]
-  then
-     echo "Discovery server and DB does not exist or was never installed."
-     echo "Please use https://access.redhat.com/documentation/en-us/subscription_central/1-latest/html-single/installing_and_configuring_discovery/index to install the latest version"
-     exit 1;
-  elif [ `podman ps -a | grep discovery | grep -v toolbox | wc -l` -eq 0 ]; then
-     echo "Discovery server does not exist."
-     echo "Please update your discovery tool to the latest by using https://access.redhat.com/articles/7036146"
-     exit 1; 
-  fi
   CURRENT_VER=$(podman inspect discovery -f '{{.Config.Labels.version}}')
+  #echo "current version is $CURRENT_VER"
 }
 
 get_latest_ver(){
