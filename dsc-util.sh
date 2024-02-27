@@ -64,7 +64,6 @@ pre_check(){
   then
      echo "Discovery and/or DB containers does not exist or were never installed."
      echo "Please use https://access.redhat.com/documentation/en-us/subscription_central/1-latest/html-single/installing_and_configuring_discovery/index to install the latest version"
-     echo "Or use https://access.redhat.com/articles/7036146 to update to the latest"
      exit 1;
   fi
 }
