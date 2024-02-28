@@ -46,6 +46,10 @@ main_menu()
     get-logs)
       get_logs_func
       ;;
+    pull_latest)
+      check_login
+      podman pull $REG_PATH/$LATEST_IMAGE
+      ;;  
     *)
       echo "Please, pass the desired parameter"
       echo ""
@@ -54,6 +58,7 @@ main_menu()
       echo "$0 stop-pod              # Stop the 'discovery-pod' pod"
       echo "$0 start-pod             # Start the 'discovery-pod' pod"
       echo "$0 get-logs              # Get the logs from discovery and DB"
+      echo "$0 pull_latest	    # Pull the latest discovery image"
       ;;
   esac
 }
