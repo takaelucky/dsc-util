@@ -64,7 +64,17 @@ main_menu()
       pull_latest 
       do_install_func
       ;;
-    do-chpass-update|do-install)
+    do-install)
+      pre_check no_exit
+      check_login
+      get_current_ver
+      get_latest_ver
+      check_current no_message
+      set_passwd
+      pull_latest
+      do_install_func
+      ;; 
+    do-chpass-update)
       pre_check no_exit
       check_login
       set_passwd
@@ -245,9 +255,12 @@ check_passwd(){
            ;;
   esac
  
-  CURRENT_PASS=`podman inspect discovery -f "{{ (index .Config.Env 22) }}" | cut -d"=" -f2`  
-  #echo ${#CURRENT_PASS}
+  # CURRENT_PASS=`podman inspect discovery -f "{{ (index .Config.Env 22) }}" | cut -d"=" -f2`  
+  CURRENT_PASS=`podman inspect discovery | grep  QPC_SERVER_PASSWORD | sort -u | cut -d"=" -f2 | cut -d\" -f1`
+  #echo "current passwd length is ${#CURRENT_PASS}"
+  #echo "current pass is $CURRENT_PASS"
 
+  
   if [ ${#CURRENT_PASS} -lt 10 ]
   then
      echo "Your current password length is less than 10"
@@ -290,7 +303,9 @@ set_passwd(){
   if [ ${#NEW_PASS} -lt 10 ]
   then
     echo
-    echo "FAIL: The password does not meet the requirement of minimum 10 characters - Try again" 
+    echo "FAIL: The password does not meet the requirement of minimum 10 characters" 
+    echo "Rerun './dsc-util.sh do-chpass-update' to change the password and get the latest"
+    echo "Or 'Rereun ./dsc-util.sh do-install' to do the fresh install"
     exit 1 
   fi
 }
@@ -305,8 +320,6 @@ pull_latest(){
 
 do_install_func(){
   # actual upgrade or installation will happen here
-  # check existing host mount
-  CURRENT_MOUNT_DIR=`podman inspect discovery  --format="{{ (index .Mounts 0).Source}}" | cut -d"/" -f1,2,3,4,5`
 
   echo  
   echo "Starting..." 
@@ -332,18 +345,11 @@ do_install_func(){
     -d $LATEST_PSQL_IMAGE 
   fi
 
-  if [[ ! -d $HOST_MOUNT_DIR/data ]] || [[ ! -d $HOST_MOUNT_DIR/log ]] || [[ ! -d $HOST_MOUNT_DIR/sshkeys ]]
+  if [[ ! -d $HOST_MOUNT_DIR ]]
   then
     mkdir -p $HOST_MOUNT_DIR/data
     mkdir -p $HOST_MOUNT_DIR/log
     mkdir -p $HOST_MOUNT_DIR/sshkeys
-  fi
-
-  #echo $CURRENT_MOUNT_DIR
-
-  if [[ $CURRENT_MOUNT_DIR != $HOST_MOUNT_DIR ]]
-  then
-    cp -r $CURRENT_MOUNT_DIR/* $HOST_MOUNT_DIR/
   fi
 
   # re-run discovery with the specified password
