@@ -407,7 +407,7 @@ do_install_func(){
   then
     echo "Discovery database did not start, please check the log by 'podman logs dsc-db' for any errors"
   else
-    echo "Discovery tool is up-to-date. Please login the web ui with 'https://ip_discovery:9443' " 
+    echo "Discovery tool is up-to-date. Please login the web ui with 'https://$(hostname):9443' " 
   fi
 
 }
