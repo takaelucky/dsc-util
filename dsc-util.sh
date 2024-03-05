@@ -282,7 +282,7 @@ check_passwd(){
 passwd_requirement(){
   #  notify the password requirement
   echo
-  echo "The server admin password requiremt has changed as below:"
+  echo "The server admin password requirement has changed as below:"
   echo
   echo "- at least ten characters"
   echo "- cannot be a word found in the dictionary"
