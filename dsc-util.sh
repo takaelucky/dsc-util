@@ -13,11 +13,13 @@ LATEST_IMAGE=discovery-server-rhel9
 REG_PATH=registry.redhat.io/discovery
 LATEST_PSQL_IMAGE=registry.redhat.io/rhel8/postgresql-12:latest
 HOST_MOUNT_DIR="${HOME}"/.local/share/discovery
+CURRENT_MOUNT_DIR=""
 CURRENT_VER=""
 LATEST_VER=""
 DISCOVERY_OFFLINE_FILE="/root/discovery_tags.txt"
 CURRENT_PASS=""
 NEW_PASS=""
+INSTALLED=1
 ### End of Global Variable ###
 
 ### Function declaration ### 
@@ -25,14 +27,14 @@ NEW_PASS=""
 main_menu()
 {
   case $1 in
-    check_version)
+    check-version)
       pre_check
       check_login
       get_current_ver
       get_latest_ver
       check_current
       ;;
-    check_version_disc)
+    check-version-disc)
       pre_check
       get_current_ver
       get_latest_ver disconnected
@@ -84,8 +86,8 @@ main_menu()
     *)
       echo "Please, pass the desired parameter"
       echo ""
-      echo "$0 check_version         # Check the current version and also for update"
-      echo "$0 check_version_disc    # Check the current version and also for update, on disconnected environment"
+      echo "$0 check-version         # Check the current version and also for update"
+      echo "$0 check-version-disc    # Check the current version and also for update, on disconnected environment"
       echo "$0 stop-pod              # Stop the 'discovery-pod' pod"
       echo "$0 start-pod             # Start the 'discovery-pod' pod"
       echo "$0 get-logs              # Get the logs from discovery and DB"
@@ -107,15 +109,18 @@ pre_check(){
   fi
 
   # exit out if discovery server and/or db does not exist, but bypass if this is called from do-update/do-install
-  if [[ -z $1 ]]
+  if [ `podman ps -a | grep discovery | grep -v toolbox | wc -l` -eq 0 ] || [ `podman ps -a | grep dsc-db | wc -l` -eq 0 ]
   then
-    if [ `podman ps -a | grep discovery | grep -v toolbox | wc -l` -eq 0 ] || [ `podman ps -a | grep dsc-db | wc -l` -eq 0 ]
+    if [[ -z $1 ]]
     then
       echo "Discovery and/or DB containers does not exist or were never installed."
       echo "Please install the discovery tool by using"
       echo "https://access.redhat.com/documentation/en-us/subscription_central/1-latest/html-single/installing_and_configuring_discovery/index to install the latest version"
-      echo "Or run './dsc-util.sh do-install' to reinstall the Discovery tools" 
+      echo "Or run './dsc-util.sh do-install' to reinstall the Discovery tools"
       exit 1
+    else
+      # setting INSTALLED to false (0) to notify get_current_ver to skip the podman exec
+      INSTALLED=0
     fi
   fi
 }
@@ -132,8 +137,12 @@ check_login(){
 }
 
 get_current_ver(){
-  CURRENT_VER=$(podman inspect discovery -f '{{.Config.Labels.version}}')
-  #echo "current version is $CURRENT_VER"
+  
+  if [[ $INSTALLED = 1 ]]
+  then
+    CURRENT_VER=$(podman inspect discovery -f '{{.Config.Labels.version}}')
+    # echo "current version is $CURRENT_VER"
+  fi
 }
 
 get_latest_ver(){
@@ -303,9 +312,7 @@ set_passwd(){
   if [ ${#NEW_PASS} -lt 10 ]
   then
     echo
-    echo "FAIL: The password does not meet the requirement of minimum 10 characters" 
-    echo "Rerun './dsc-util.sh do-chpass-update' to change the password and get the latest"
-    echo "Or 'Rereun ./dsc-util.sh do-install' to do the fresh install"
+    echo "FAIL: The password does not meet the requirement of minimum 10 characters - Try again" 
     exit 1 
   fi
 }
@@ -320,20 +327,26 @@ pull_latest(){
 
 do_install_func(){
   # actual upgrade or installation will happen here
+  # check existing host mount
 
-  echo  
-  echo "Starting..." 
+  if [[ $INSTALLED = 1 ]]
+  then
+    CURRENT_MOUNT_DIR=`podman inspect discovery  --format="{{ (index .Mounts 0).Source}}" | cut -d"/" -f1,2,3,4,5`
+  fi
+
+    echo  
+    echo "Starting..." 
 
   # stop discovery-pod and remove discovery container
-  podman pod stop discovery-pod
-  podman rm discovery
+  podman pod stop discovery-pod 2> /dev/null
+  podman rm discovery 2> /dev/null
 
   # set current password to a new one if user wants to change, then clean & re-run dsc-db with the new password
   if [[ -n $NEW_PASS ]]
   then
     CURRENT_PASS=$NEW_PASS
-    podman rm dsc-db
-    podman pod rm discovery-pod
+    podman rm dsc-db 2> /dev/null
+    podman pod rm discovery-pod 2> /dev/null
     podman run --name dsc-db \
     --pod new:discovery-pod \
     --publish 9443:443 \
@@ -345,11 +358,17 @@ do_install_func(){
     -d $LATEST_PSQL_IMAGE 
   fi
 
-  if [[ ! -d $HOST_MOUNT_DIR ]]
+  if [[ ! -d $HOST_MOUNT_DIR/data ]] || [[ ! -d $HOST_MOUNT_DIR/log ]] || [[ ! -d $HOST_MOUNT_DIR/sshkeys ]]
   then
     mkdir -p $HOST_MOUNT_DIR/data
     mkdir -p $HOST_MOUNT_DIR/log
     mkdir -p $HOST_MOUNT_DIR/sshkeys
+  fi
+
+  # iff the discovery was previously installed && the current host mount and old are not the same
+  if [[ $INSTALLED = 1 ]] && [[ $CURRENT_MOUNT_DIR != $HOST_MOUNT_DIR ]]
+  then
+    cp -r $CURRENT_MOUNT_DIR/* $HOST_MOUNT_DIR/
   fi
 
   # re-run discovery with the specified password
@@ -357,7 +376,6 @@ do_install_func(){
   --name discovery \
   --restart on-failure \
   --pod discovery-pod \
-  --label "io.containers.autoupdate=registry" \
   -e DJANGO_DEBUG=False \
   -e NETWORK_CONNECT_JOB_TIMEOUT=60 \
   -e NETWORK_INSPECT_JOB_TIMEOUT=600 \
