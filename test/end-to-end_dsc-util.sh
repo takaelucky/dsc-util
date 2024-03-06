@@ -54,6 +54,9 @@ discovery_current_state()
   -v "${HOME}"/.local/share/discovery/log/:/var/log:z \
   -v "${HOME}"/.local/share/discovery/sshkeys/:/sshkeys:z \
   -d registry.redhat.io/discovery/discovery-server-rhel9:latest
+
+  # Now, it's time to call all the amazing tests
+  dsc_tests
 }
 
 discovery_previous_state()
@@ -98,6 +101,8 @@ discovery_previous_state()
   -v "${HOME}"/.local/share/discovery/log/:/var/log:z \
   -v "${HOME}"/.local/share/discovery/sshkeys/:/sshkeys:z \
   -d registry.redhat.io/discovery/discovery-server-rhel9:1.4.6
+
+  dsc_tests
 }
 
 discovery_old_version_diff_path()
@@ -142,6 +147,8 @@ discovery_old_version_diff_path()
   -v /var/discovery/server/volumes/log/:/var/log:z \
   -v /var/discovery/server/volumes/sshkeys/:/sshkeys:z \
   -d registry.redhat.io/discovery/discovery-server-rhel9:1.4.4
+
+  dsc_tests
 }
 
 discovery_not_installed()
@@ -181,8 +188,8 @@ discovery_not_installed()
   echo "removing the '$HOME/.local/share/discovery' folder, if around" &>>$LOG
   echo "---" &>>$LOG
   if [ -d $HOME/.local/share/discovery ]; then
-		echo "removing the directory '$HOME/.local/share/discovery'" &>>$LOG
-		rm -rfv "$HOME/.local/share/discovery" &>>$LOG
+    echo "removing the directory '$HOME/.local/share/discovery'" &>>$LOG
+    rm -rfv "$HOME/.local/share/discovery" &>>$LOG
   fi
   echo "---" &>>$LOG
   echo &>>$LOG
@@ -191,39 +198,128 @@ discovery_not_installed()
   echo "removing the '/var/discovery' folder, if around" &>>$LOG
   echo "---" &>>$LOG
   if [ -d /var/discovery ]; then
-		echo "removing the directory '/var/discovery'" &>>$LOG
-		rm -rfv "/var/discovery" &>>$LOG
+    echo "removing the directory '/var/discovery'" &>>$LOG
+    rm -rfv "/var/discovery" &>>$LOG
   fi
   echo "---" &>>$LOG
   echo &>>$LOG
+}
+
+####
+
+dsc_tests()
+{
+  check_fresh=$1
+
+  echo
+  echo "## BEGINNING TEST ##"
+
+  echo
+  echo "waiting for 10 seconds ..., please, bare with me ..."
+  sleep 10
+
+  echo
+  echo "check-version"
+  echo "---"
+  $DSC_UTIL check-version         # Check the current version and also for update
+  echo "---"
+
+  echo
+  echo "stop-pod"
+  echo "---"
+  $DSC_UTIL stop-pod              # Stop the 'discovery-pod' pod
+  echo "---"
+
+  echo
+  echo "start-pod"
+  echo "---"
+  $DSC_UTIL start-pod             # Start the 'discovery-pod' pod
+  echo "---"
+
+  echo
+  echo "waiting for 5 seconds ..., please, bare with me ..."
+  sleep 5
+
+  echo
+  echo "get-logs"
+  echo "---"
+  $DSC_UTIL get-logs              # Get the logs from discovery and DB
+  echo "---"
+
+  echo
+  echo "do-update"
+  echo "---"
+  echo "c" | $DSC_UTIL do-update             # Update the discovery tool to the latest
+  echo "---"
+
+  echo
+  echo "do-install"
+  echo "---"
+  if [ $check_fresh == "fresh" ]; then
+    echo "## NOT AUTOMATED AT THIS MOMENT"
+    echo "Please, run $DSC_UTIL do-install manually, once it will request a new password"
+    echo "## NOT AUTOMATED AT THIS MOMENT"
+  else
+    $DSC_UTIL do-install            # Fresh installation of the Discovery tool
+  fi
+  echo "---"
+
+  echo
+  echo "podman ps -a"
+  echo "---"
+  podman ps -a
+  echo "---"
+
+  echo
+  echo "podman images"
+  echo "---"
+  podman images
+  echo "---"
+
+  # not tested at this moment
+  # $DSC_UTIL check-version-disc    # Check the current version and also for update, on disconnected environment
+  # $DSC_UTIL do-chpass-update      # Change password and update the discovery tool to the latest
+
+  echo
+  echo "## ENDING TEST ##"
 }
 
 
 # To confirm that I'm using an account with access to registry.redhat.io
 check_login
 
-# --- Scenario 1 ---
-# Total discovery cleanup on the local machine
+echo "# --- Scenario 1 ---"
+echo "# Total discovery cleanup on the local machine"
 discovery_not_installed
 
-# Discovery on the latest version
+echo "# Discovery on the latest version"
 discovery_current_state
-# --- End of Scenario 1 ---
+echo "# --- End of Scenario 1 ---"
 
 
-# --- Scenario 2 ---
-# Total discovery cleanup on the local machine
-# discovery_not_installed
+echo "# --- Scenario 2 ---"
+echo "# Total discovery cleanup on the local machine"
+discovery_not_installed
 
-# Discovery on version 1.4.6
-# discovery_previous_state
-# --- End of Scenario 2 ---
+echo "# Discovery on version 1.4.6"
+discovery_previous_state
+echo "# --- End of Scenario 2 ---"
 
 
-# --- Scenario 3 ---
-# Total discovery cleanup on the local machine
-# discovery_not_installed
+echo "# --- Scenario 3 ---"
+echo "# Total discovery cleanup on the local machine"
+discovery_not_installed
 
-# Discovery on version 1.4.4 and diff path for the files
-# discovery_old_version_diff_path
-# --- End of Scenario 3 ---
+echo "# Discovery on version 1.4.4 and diff path for the files"
+discovery_old_version_diff_path
+echo "# --- End of Scenario 3 ---"
+
+
+echo "# --- Scenario 4 ---"
+echo "# Total discovery cleanup on the local machine"
+echo "# and let's install using the dsc-util"
+discovery_not_installed
+
+echo "# Testing all the options in a fresh environment"
+dsc_tests fresh
+echo "# --- End of Scenario 4 ---"
