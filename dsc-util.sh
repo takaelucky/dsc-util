@@ -191,6 +191,9 @@ get_latest_ver(){
 }
 
 check_current(){
+
+if [[ $INSTALLED = 1 ]]
+then
   if [ `podman images | grep $LATEST_IMAGE | wc -l` -eq 0 ] || [ $LATEST_VER != $CURRENT_VER ]
   then
     if [[ -z $1 ]]
@@ -200,11 +203,11 @@ check_current(){
      echo "ref: https://access.redhat.com/articles/7036146"
     fi
   else
-    echo "Your current version is $CURRENT_VER and the latest is $LATEST_VER"
-    echo "The Discovery tool is up-to-date and you are all set"
-    exit
+     echo "Your current version is $CURRENT_VER and the latest is $LATEST_VER"
+     echo "The Discovery tool is up-to-date and you are all set"
+     exit
   fi
-
+fi
 }
 
 get_logs_func(){
@@ -282,7 +285,7 @@ check_passwd(){
 passwd_requirement(){
   #  notify the password requirement
   echo
-  echo "The server admin password requirement has changed as below:"
+  echo "The server admin password requiremt has changed as below:"
   echo
   echo "- at least ten characters"
   echo "- cannot be a word found in the dictionary"
@@ -407,7 +410,7 @@ do_install_func(){
   then
     echo "Discovery database did not start, please check the log by 'podman logs dsc-db' for any errors"
   else
-    echo "Discovery tool is up-to-date. Please login the web ui with 'https://$(hostname):9443' " 
+    echo "Discovery tool is up-to-date. Please login the web ui with 'https://ip_discovery:9443' " 
   fi
 
 }
