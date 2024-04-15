@@ -191,23 +191,23 @@ get_latest_ver(){
 }
 
 check_current(){
-
-if [[ $INSTALLED = 1 ]]
-then
-  if [ `podman images | grep $LATEST_IMAGE | wc -l` -eq 0 ] || [ $LATEST_VER != $CURRENT_VER ]
-  then
-    if [[ -z $1 ]]
-    then
-     echo "Your current version is $CURRENT_VER and the latest is $LATEST_VER"
-     echo "Please run './dsc-util.sh do-update' to update to the latest"
-     echo "ref: https://access.redhat.com/articles/7036146"
-    fi
-  else
-     echo "Your current version is $CURRENT_VER and the latest is $LATEST_VER"
-     echo "The Discovery tool is up-to-date and you are all set"
-     exit
-  fi
-fi
+ # skip if the discovery is not installed
+ if [[ $INSTALLED = 1 ]]
+ then
+   if [ `podman images | grep $LATEST_IMAGE | wc -l` -eq 0 ] || [ $LATEST_VER != $CURRENT_VER ]
+   then
+     if [[ -z $1 ]]
+     then
+      echo "Your current version is $CURRENT_VER and the latest is $LATEST_VER"
+      echo "Please run './dsc-util.sh do-update' to update to the latest"
+      echo "ref: https://access.redhat.com/articles/7036146"
+     fi
+   else
+      echo "Your current version is $CURRENT_VER and the latest is $LATEST_VER"
+      echo "The Discovery tool is up-to-date and you are all set"
+      exit
+   fi
+ fi
 }
 
 get_logs_func(){
@@ -244,8 +244,13 @@ get_logs_func(){
 check_passwd(){
   # check and notify the strick passwort requirement
   # the below 2 lines are for future enhancement if allows for different password
-  # CURRENT_PSQL_PASS=`podman inspect dsc-db -f "{{ (index .Config.Env 2) }}" | cut -d"=" -f2`
-  # CURRENT_DBMS_PASS=`podman inspect discovery -f "{{ (index .Config.Env 18) }}" | cut -d"=" -f2`
+
+  if [[ $INSTALLED = 0 ]]
+  then
+    echo "Discovery tool is not installed"
+    echo "Please run './dsc-util.sh do-install' to reinstall the Discovery tools"
+    exit 1
+  fi
 
   USER_REPLY=""
 
@@ -285,7 +290,7 @@ check_passwd(){
 passwd_requirement(){
   #  notify the password requirement
   echo
-  echo "The server admin password requiremt has changed as below:"
+  echo "The server admin password requirement has changed as below:"
   echo
   echo "- at least ten characters"
   echo "- cannot be a word found in the dictionary"
@@ -410,7 +415,7 @@ do_install_func(){
   then
     echo "Discovery database did not start, please check the log by 'podman logs dsc-db' for any errors"
   else
-    echo "Discovery tool is up-to-date. Please login the web ui with 'https://ip_discovery:9443' " 
+    echo "Discovery tool is up-to-date. Please login the web ui with 'https://$(hostname):9443' " 
   fi
 
 }
