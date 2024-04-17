@@ -8,7 +8,6 @@
 #               Waldirio Pinheiro <waldirio@gmail.com>
 # 
 
-
 ### Global Variable ###
 LATEST_IMAGE=discovery-server-rhel9
 REG_PATH=registry.redhat.io/discovery
